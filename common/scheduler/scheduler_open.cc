@@ -16,6 +16,8 @@
 #include "policies/dvfsConstFreq.h"
 #include "policies/dvfsOndemand.h"
 #include "policies/mapFirstUnused.h"
+#include "policies/dnape.h"
+#include "policies/dvfsDnape.h"
 
 #include "policies/dramLowpower.h"
 
@@ -193,6 +195,23 @@ void SchedulerOpen::initDVFSPolicy(String policyName) {
 			dtmCriticalTemperature,
 			dtmRecoveredTemperature
 		);
+	} else if (policyName == "dnape") {
+		float criticalTemperature = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/criticalTemperature");
+		float alfa = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/alfa");
+		float freqThreshold = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/freqThreshold");
+		float delta = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/delta");
+
+		dvfsPolicy = new DVFSDnape(
+			performanceCounters,
+			numberOfCores,
+			minFrequency,
+			maxFrequency,
+			frequencyStepSize,
+			criticalTemperature, 
+			alfa, 
+			freqThreshold, 
+			delta
+		);
 	} //else if (policyName ="XYZ") {... } //Place to instantiate a new DVFS logic. Implementation is put in "policies" package.
 	else {
 		cout << "\n[Scheduler] [Error]: Unknown DVFS Algorithm" << endl;
@@ -208,7 +227,51 @@ void SchedulerOpen::initMigrationPolicy(String policyName) {
 	if (policyName == "off") {
 		migrationPolicy = NULL;
 	} //else if (policyName ="XYZ") {... } //Place to instantiate a new migration logic. Implementation is put in "policies" package.
-	else {
+	else if (policyName == "dnape") {
+		float criticalTemperature = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/criticalTemperature");
+		float alfa = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/alfa");
+		float freqThreshold = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/freqThreshold");
+		float delta = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/delta");
+
+		int coresInX = Sim()->getCfg()->getInt("memory/cores_in_x");
+		int coresInY = Sim()->getCfg()->getInt("memory/cores_in_y");
+		int coresInZ = Sim()->getCfg()->getInt("memory/cores_in_z");
+		SubsecondTime wake_up_latency = SubsecondTime::NS() * Sim()->getCfg()->getInt("scheduler/open/migration/dnape/wake_up_latency");
+		migrationPolicy = new Dnape(
+			performanceCounters,
+			coresInZ,
+			coresInY,
+			coresInX,
+			criticalTemperature,
+			alfa,
+			freqThreshold,
+			delta,
+			wake_up_latency,
+			true
+		);
+	} else if (policyName == "dnape_3D") {
+		float criticalTemperature = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/criticalTemperature");
+		float alfa = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/alfa");
+		float freqThreshold = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/freqThreshold");
+		float delta = Sim()->getCfg()->getFloat("scheduler/open/migration/dnape/delta");
+
+		int coresInX = Sim()->getCfg()->getInt("memory/cores_in_x");
+		int coresInY = Sim()->getCfg()->getInt("memory/cores_in_y");
+		int coresInZ = Sim()->getCfg()->getInt("memory/cores_in_z");
+		SubsecondTime wake_up_latency = SubsecondTime::NS() * Sim()->getCfg()->getInt("scheduler/open/migration/dnape/wake_up_latency");
+		migrationPolicy = new Dnape(
+			performanceCounters,
+			coresInZ,
+			coresInY,
+			coresInX,
+			criticalTemperature,
+			alfa,
+			freqThreshold,
+			delta,
+			wake_up_latency,
+			false
+		);
+	} else {
 		cout << "\n[Scheduler] [Error]: Unknown Migration Algorithm: " << policyName << endl;
  		exit (1);
 	}
